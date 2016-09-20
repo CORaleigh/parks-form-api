@@ -1,5 +1,5 @@
 {
-    "name": "imaps-api",
+    "name": "parks-form-api",
     "main": "server.js",
     "dependencies": {
         "express": "~4.0.0",

@@ -8,15 +8,18 @@ var express    = require('express');        // call express
 var app        = express();                 // define our app using express
 var bodyParser = require('body-parser');
 var mongoose   = require('mongoose');
-//mongoose.connect('mongodb://imaps:ralwake2009@mongdbprdapplv1:27017/imaps'); // connect to our database
-mongoose.connect('mongodb://localhost:27017/parkForm'); // connect to our database
+mongoose.connect('mongodb://prcr:parksPricing!@mongdbprdapplv1:27017/parksForm'); // connect to our database
+//mongoose.connect('mongodb://localhost:27017/parkForm'); // connect to our database
 var FormEntry = require('./app/models/formEntry');
+var Facility = require('./app/models/facility');
+var Target = require('./app/models/target');
+var Job = require('./app/models/job');
 // configure app to use bodyParser()
 // this will let us get the data from a POST
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
-var port = process.env.PORT || 8080;        // set our port
-
+//var port = process.env.PORT || 8081;        // set our port
+var port = 8081;
 // ROUTES FOR OUR API
 // =============================================================================
 var router = express.Router();              // get an instance of the express Router
@@ -25,8 +28,9 @@ var router = express.Router();              // get an instance of the express Ro
 router.use(function(req, res, next) {
     // do logging
     console.log('Something is happening.');
-    res.header("Access-Control-Allow-Origin", "*");
+//    res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Headers",  "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
+    res.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS,DELETE");
     next(); // make sure we go to the next routes and don't stop here
 });
 
@@ -51,6 +55,7 @@ router.route('/form')
     entry.programArea = req.body.programArea;
     entry.title = req.body.title;
     entry.category = req.body.category;
+    entry.cityFacility = req.body.cityFacility;
     entry.facility = req.body.facility;
     entry.start = req.body.start;
     entry.preparer = req.body.preparer;
@@ -86,13 +91,27 @@ router.route('/form')
       }
     }
 
-    entry.save(function (err) {
+    entry.save(function (err, newEntry) {
       if (err)
         res.send(err);
-      res.json({message: entry});
+      res.json(newEntry);
     })
   })
+.delete(function (req, res) {
+	FormEntry.remove({_id: req.body.id}, function (err, entry) {
+                if (err)
+                        res.send(err)
+                res.json({message: 'Successfully deleted ' + req.body.id});
+        });
+});
 router.route('/form/:id')
+  .get(function(req, res) {
+    FormEntry.find({_id: req.params.id}).exec(function(err, entries) {
+        if (err)
+            res.send(err);
+        res.json(entries);
+    });
+  })
   .post(function (req, res) {
 
   FormEntry.findById(req.params.id, function(err, entry) {
@@ -103,6 +122,7 @@ router.route('/form/:id')
     entry.programArea = req.body.programArea;
     entry.title = req.body.title;
     entry.category = req.body.category;
+    entry.cityFacility = req.body.cityFacility;
     entry.facility = req.body.facility;
     entry.start = req.body.start;
     entry.preparer = req.body.preparer;
@@ -141,17 +161,109 @@ router.route('/form/:id')
     entry.save(function (err) {
       if (err)
         res.send(err);
-      res.json({message: entry});
+      res.json(entry);
     })
   });
-
-
-
-
+});
+  router.route('/facilities')
+  .get(function (req, res) {
+   Facility.find({}).sort({name: 1}).exec(function(err, facilities) {
+        if (err)
+            res.send(err);
+        res.json(facilities);
+    });
   })
-// REGISTER OUR ROUTES -------------------------------
+ .post(function (req, res) {
+     var facility = new Facility();
+     facility.name = req.body.name;
+     facility.save(function (err, newFacility) {
+      if (err)
+        res.send(err);
+      res.json(newFacility);
+    })
+  })
+  .delete(function (req, res){
+        Facility.remove({_id: req.body.id}, function (err, entry) {
+                if (err)
+                        res.send(err)
+                res.json({message: 'Successfully deleted ' + req.body.id});
+        });
+  });
+  router.route('/targets')
+  .get(function (req, res) {
+   Target.find({}).sort({name: 1}).exec(function(err, targets) {
+        if (err)
+            res.send(err);
+        res.json(targets);
+    });
+  })
+  .post(function (req, res) {
+    var target = new Target();
+     target.name = req.body.name;
+     target._id = mongoose.Types.ObjectId(); 
+     target.services = [];
+     target.save(function (err, newTarget) {
+      if (err)
+        res.send(err);
+      res.json(newTarget);
+    })
+  })
+  .delete(function (req, res){
+        Target.remove({_id: req.body.id}, function (err, entry) {
+                if (err)
+                        res.send(err)
+                res.json({message: 'Successfully deleted ' + req.body.id});
+        });
+  });  
+  router.route('/jobs')
+  .get(function (req, res) {
+   Job.find({}).sort({name: 1}).exec(function(err, jobs) {
+        if (err)
+            res.send(err);
+        res.json(jobs);
+    });
+  })
+ .post(function (req, res) {
+     var job = new Job();
+     job.name = req.body.name;
+     job.save(function (err, newJob) {
+      if (err)
+        res.send(err);
+      res.json(newJob);
+    })
+  })
+  .delete(function (req, res){
+        Job.remove({_id: req.body.id}, function (err, entry) {
+                if (err)
+                        res.send(err)
+                res.json({message: 'Successfully deleted ' + req.body.id});
+        });
+  });
+
+ router.route('/targets/service/:id')
+.post(function (req, res){
+   Target.update({"services._id": req.params.id}, {"$set":{"services.$.value": req.body.value, "services.$.name": req.body.name}}, {}, function (err){
+   if (err)
+      res.send(err);
+   res.json({message: 'Successfully updated'});
+})})
+.delete(function (req, res){
+   Target.update({}, {"$pull": { "services": { "_id": req.params.id }}}, {"multi": true}, function (err) {
+     if (err) {
+        res.send(err);
+     }
+     res.json({message: 'Successfully removed'});
+});});
+router.route('/targets/:id')
+.post(function(req,res){
+   Target.update({"_id": mongoose.Types.ObjectId(req.params.id)}, {"$push": { "services" : { "name": req.body.name, "value": req.body.value, "_id": mongoose.Types.ObjectId()}}}, {}, function (err) {
+   if (err)
+      res.send(err);
+   res.json({message: 'Service added'});
+})});
+
 // all of our routes will be prefixed with /api
-app.use('/api', router);
+app.use('/parks-form-api', router);
 // =============================================================================
 app.listen(port);
 console.log('Magic happens on port ' + port);

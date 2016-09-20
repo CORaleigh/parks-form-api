@@ -22,6 +22,7 @@ var FormEntrySchema   = new Schema({
 	comments: String,
 	preparer: String,
 	start: Date,
+	cityFacility: Boolean,
 	facility: String,
 	category: {
 		name: String,
