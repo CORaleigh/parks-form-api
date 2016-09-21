@@ -8,7 +8,13 @@ var express    = require('express');        // call express
 var app        = express();                 // define our app using express
 var bodyParser = require('body-parser');
 var mongoose   = require('mongoose');
-mongoose.connect('mongodb://prcr:parksPricing!@mongdbprdapplv1:27017/parksForm'); // connect to our database
+var morgan = require('morgan');
+var passport = require('passport');
+var User = require('./app/models/user');
+var jwt = require('jwt-simple');
+
+var configDB = require('./config/database.js');
+mongoose.connect(configDB.url); // connect to our database
 //mongoose.connect('mongodb://localhost:27017/parkForm'); // connect to our database
 var FormEntry = require('./app/models/formEntry');
 var Facility = require('./app/models/facility');
@@ -18,6 +24,19 @@ var Job = require('./app/models/job');
 // this will let us get the data from a POST
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
+
+app.use(morgan('dev'));
+app.use(passport.initialize());
+
+
+require('./config/passport')(passport); // pass passport for configuration
+
+
+
+
+
+
+
 //var port = process.env.PORT || 8081;        // set our port
 var port = 8081;
 // ROUTES FOR OUR API
@@ -36,6 +55,53 @@ router.use(function(req, res, next) {
 // test route to make sure everything is working (accessed at GET http://localhost:8080/api)
 router.get('/', function(req, res) {
   res.json({ message: 'hooray! welcome to our api!' });
+});
+
+
+router.route('/signup')
+.post(function (req, res) {
+  if (!req.body.email || !req.body.password) {
+    res.json({success: false, msg: 'Please pass email and password'});
+  } else {
+    var newUser = new User({
+      email: req.body.email,
+      password: req.body.password
+    });
+    
+    newUser.save(function (err) {
+      console.log(err);
+      if (err)
+        return res.json({success: false, msg: 'Username already exists.'})
+      res.json({success: true, msg: 'Successfully created new user.'})
+    });
+  }
+});
+
+router.route('/login')
+.post(function (req, res) {
+  User.findOne({email: req.body.email}, function (err, user){
+
+    if (err)
+      throw err
+    if (!user) {
+      res.send({success: false, msg: 'Authentication failed. User not found.'});
+    } else {
+      if (user.comparePassword(req.body.password)) {
+           var token = jwt.encode(user, configDB.secret);
+           res.json({success: true, token: 'JWT ' + token});
+      } else {
+        res.send({success: false, msg: 'Authentication failed. Wrong password.'});
+      }
+      // user.comparePassword(req.body.password, function (err, isMatch) {
+      //   if (isMatch && !err) {
+      //     var token = jwt.encode(user, config.secret);
+      //     res.json({success: true, token: 'JWT ' + token});
+      //   } else {
+      //     res.send({success: false, msg: 'Authentication failed. Wrong password.'});
+      //   }
+      // }); 
+    }
+  });
 });
 
 
