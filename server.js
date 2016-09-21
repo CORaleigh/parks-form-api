@@ -65,7 +65,8 @@ router.route('/signup')
   } else {
     var newUser = new User({
       email: req.body.email,
-      password: req.body.password
+      password: req.body.password,
+      admin: false
     });
     
     newUser.save(function (err) {
