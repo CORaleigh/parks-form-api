@@ -89,7 +89,7 @@ router.route('/login')
     } else {
       if (user.comparePassword(req.body.password)) {
            var token = jwt.encode(user, configDB.secret);
-           res.json({success: true, token: 'JWT ' + token});
+           res.json({success: true, token: 'JWT ' + token, admin: user.admin});
       } else {
         res.send({success: false, msg: 'Authentication failed. Wrong password.'});
       }
