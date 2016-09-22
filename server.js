@@ -37,6 +37,7 @@ var router = express.Router();              // get an instance of the express Ro
 router.use(function(req, res, next) {
   // do logging
   console.log('Something is happening.');
+  res.header("Access-Control-Allow-Origin", "*");  
   res.header("Access-Control-Allow-Headers",  "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
   res.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS,DELETE");
   next(); // make sure we go to the next routes and don't stop here
