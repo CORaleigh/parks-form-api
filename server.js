@@ -64,7 +64,7 @@ router.route('/login')
       res.send({success: false, msg: 'Authentication failed. User not found.'});
     } else {
       if (user.comparePassword(req.body.password)) {
-           var token = jwt.sign(user, app.get('superSecret'), {expiresIn: '5m'});
+           var token = jwt.sign(user, app.get('superSecret'), {expiresIn: '30s'});
            res.json({success: true, token: token, user: {email: user.email, admin: user.admin}});
       } else {
         res.send({success: false, msg: 'Authentication failed. Wrong password.'});
@@ -72,16 +72,8 @@ router.route('/login')
     }
   });
 });
-router.route('/users')
-//get list of users
-.get(function (req, res) {
-  User.find({}).sort({name: 1}).exec(function(err, users) {
-    if (err)
-      res.send(err);
-    res.json(users);
-  });
-});
 
+var isAdmin = false;
 // middleware to use for all requests
 router.use(function(req, res, next) {
   // do logging
@@ -92,6 +84,9 @@ router.use(function(req, res, next) {
   var token = req.body.token || req.query.token || req.headers['x-access-token'];
   if (token) {
     jwt.verify(token, app.get('superSecret'), function (err, decoded) {
+      if (decoded)
+        isAdmin = decoded._doc.admin;
+      
       if (err) {
         return res.json({success: false, message: 'Failed to authenticate token.'});
       } else {
@@ -173,11 +168,15 @@ router.route('/form')
   })
 //delete form entry
 .delete(function (req, res) {
-	FormEntry.remove({_id: req.body.id}, function (err, entry) {
-    if (err)
-      res.send(err)
-    res.json({message: 'Successfully deleted ' + req.body.id});
-  });
+  if (isAdmin) {
+  	FormEntry.remove({_id: req.body.id}, function (err, entry) {
+      if (err)
+        res.send(err)
+      res.json({message: 'Successfully deleted ' + req.body.id});
+    });
+  } else {
+    res.json({message: 'You do not have permission to do this'});
+  }
 });
 
 router.route('/form/:id')
@@ -250,21 +249,29 @@ router.route('/facilities')
 })
 //add new facility
 .post(function (req, res) {
+  if (isAdmin) {
     var facility = new Facility();
     facility.name = req.body.name;
     facility.save(function (err, newFacility) {
-    if (err)
-      res.send(err);
-    res.json(newFacility);
-  })
+      if (err)
+        res.send(err);
+      res.json(newFacility);
+    });
+  } else {
+    res.json({message: 'You do not have permission to do this'});
+  }
 })
 //delete facility
 .delete(function (req, res){
+  if (isAdmin) {
     Facility.remove({_id: req.body.id}, function (err, entry) {
-    if (err)
-      res.send(err)
-    res.json({message: 'Successfully deleted ' + req.body.id});
-  });
+      if (err)
+        res.send(err)
+      res.json({message: 'Successfully deleted ' + req.body.id});
+    });
+  } else {
+    res.json({message: 'You do not have permission to do this'});    
+  }
 });
 
 router.route('/targets')
@@ -278,23 +285,31 @@ router.route('/targets')
 })
 //add new target area
 .post(function (req, res) {
+  if (isAdmin) {
     var target = new Target();
     target.name = req.body.name;
     target._id = mongoose.Types.ObjectId(); 
     target.services = [];
     target.save(function (err, newTarget) {
-    if (err)
-      res.send(err);
-    res.json(newTarget);
-  })
+      if (err)
+        res.send(err);
+      res.json(newTarget);
+    });
+  } else {
+    res.json({message: 'You do not have permission to do this'});
+  }
 })
 //delete target area
 .delete(function (req, res){
-  Target.remove({_id: req.body.id}, function (err, entry) {
-    if (err)
-      res.send(err)
-    res.json({message: 'Successfully deleted ' + req.body.id});
-  });
+  if (isAdmin) {
+    Target.remove({_id: req.body.id}, function (err, entry) {
+      if (err)
+        res.send(err)
+      res.json({message: 'Successfully deleted ' + req.body.id});
+    });
+  } else {
+    res.json({message: 'You do not have permission to do this'});    
+  }
 });  
 
 
@@ -309,50 +324,114 @@ router.route('/jobs')
 })
 //add new job
 .post(function (req, res) {
+  if (isAdmin) {
     var job = new Job();
     job.name = req.body.name;
     job.save(function (err, newJob) {
-    if (err)
-      res.send(err);
-    res.json(newJob);
-  })
+      if (err)
+        res.send(err);
+      res.json(newJob);
+    });
+  } else {
+    res.json({message: 'You do not have permission to do this'});    
+  }
 })
 //delete job
 .delete(function (req, res){
-  Job.remove({_id: req.body.id}, function (err, entry) {
-    if (err)
-      res.send(err)
-    res.json({message: 'Successfully deleted ' + req.body.id});
-  });
+  if (isAdmin) {
+    Job.remove({_id: req.body.id}, function (err, entry) {
+      if (err)
+        res.send(err)
+      res.json({message: 'Successfully deleted ' + req.body.id});
+    });
+  } else {
+    res.json({message: 'You do not have permission to do this'});    
+  }
 });
 
 router.route('/targets/service/:id')
 //update service category name and values
 .post(function (req, res){
+  if (isAdmin) {
     Target.update({"services._id": req.params.id}, {"$set":{"services.$.value": req.body.value, "services.$.name": req.body.name}}, {}, function (err){
-    if (err)
-      res.send(err);
-    res.json({message: 'Successfully updated'});
-  })
+      if (err)
+        res.send(err);
+      res.json({message: 'Successfully updated'});
+    });
+  } else {
+    res.json({message: 'You do not have permission to do this'});    
+  }
 })
 //delete service category
 .delete(function (req, res){
-  Target.update({}, {"$pull": { "services": { "_id": req.params.id }}}, {"multi": true}, function (err) {
-    if (err) {
-      res.send(err);
-    }
-    res.json({message: 'Successfully removed'});
-  });
+  if (isAdmin) {
+    Target.update({}, {"$pull": { "services": { "_id": req.params.id }}}, {"multi": true}, function (err) {
+      if (err) {
+        res.send(err);
+      }
+      res.json({message: 'Successfully removed'});
+    });
+  } else {
+    res.json({message: 'You do not have permission to do this'});    
+  }
 });
 
 router.route('/targets/:id')
 //add new service category
 .post(function(req,res){
+  if (isAdmin) {
    Target.update({"_id": mongoose.Types.ObjectId(req.params.id)}, {"$push": { "services" : { "name": req.body.name, "value": req.body.value, "_id": mongoose.Types.ObjectId()}}}, {}, function (err) {
-   if (err)
-      res.send(err);
-   res.json({message: 'Service added'});
-  })
+     if (err)
+        res.send(err);
+     res.json({message: 'Service added'});
+    });
+  } else {
+    res.json({message: 'You do not have permission to do this'});    
+  }
+});
+
+router.route('/users')
+//get list of users
+.get(function (req, res) {
+  if (isAdmin) {
+    User.find({}).sort({name: 1}).exec(function(err, users) {
+      if (err)
+        res.send(err);
+      var data = [];
+      for (var i = 0; i < users.length; i++) {
+        delete users[i]['password'];
+        data.push({_id: users[i]._id, email: users[i].email, admin: users[i].admin});
+      }
+      res.json(data);
+    });   
+  } else {
+    res.json({message: 'You do not have permission to do this'});      
+  }
+});
+router.route('/users/:id')
+//update user admin
+.post(function (req, res){
+  if (isAdmin) {
+    User.update({"_id": req.params.id}, {"$set":{"admin": req.body.admin}}, {}, function (err){
+      if (err)
+        res.send(err);
+      res.json({message: 'Successfully updated'});
+    });
+  } else {
+    res.json({message: 'You do not have permission to do this'});    
+  }
+})
+//delete user by id
+.delete(function (req, res) {
+  if (isAdmin) {
+    User.remove({_id: req.params.id}, function (err, entry) {
+      if (err)
+        res.send(err)
+      res.json({message: 'Successfully deleted ' + req.body.id});
+    });
+  } else {
+    res.json({message: 'You do not have permission to do this'});    
+  }
 });
 
 
