@@ -9,13 +9,11 @@ var app        = express();                 // define our app using express
 var bodyParser = require('body-parser');
 var mongoose   = require('mongoose');
 var morgan = require('morgan');
-var passport = require('passport');
 var User = require('./app/models/user');
 var jwt = require('jsonwebtoken');
 
 var configDB = require('./config/database.js');
 mongoose.connect(configDB.url); // connect to our database
-//mongoose.connect('mongodb://localhost:27017/parkForm'); // connect to our database
 var FormEntry = require('./app/models/formEntry');
 var Facility = require('./app/models/facility');
 var Target = require('./app/models/target');
@@ -26,16 +24,8 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
 app.use(morgan('dev'));
-app.use(passport.initialize());
 
-
-require('./config/passport')(passport); // pass passport for configuration
-
-
-
-
-
-
+app.set('superSecret', configDB.secret);
 
 //var port = process.env.PORT || 8081;        // set our port
 var port = 8081;
@@ -43,19 +33,6 @@ var port = 8081;
 // =============================================================================
 var router = express.Router();              // get an instance of the express Router
 
-// middleware to use for all requests
-router.use(function(req, res, next) {
-  // do logging
-  console.log('Something is happening.');
-  res.header("Access-Control-Allow-Headers",  "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
-  res.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS,DELETE");
-  next(); // make sure we go to the next routes and don't stop here
-});
-
-// test route to make sure everything is working (accessed at GET http://localhost:8080/api)
-router.get('/', function(req, res) {
-  res.json({ message: 'hooray! welcome to our api!' });
-});
 
 
 router.route('/signup')
@@ -81,30 +58,52 @@ router.route('/signup')
 router.route('/login')
 .post(function (req, res) {
   User.findOne({email: req.body.email}, function (err, user){
-
     if (err)
       throw err
     if (!user) {
       res.send({success: false, msg: 'Authentication failed. User not found.'});
     } else {
       if (user.comparePassword(req.body.password)) {
-           var token = jwt.encode(user, configDB.secret);
-           res.json({success: true, token: 'JWT ' + token, user: {email: user.email, admin: user.admin}});
+           var token = jwt.sign(user, app.get('superSecret'), {expiresIn: '5m'});
+           res.json({success: true, token: token, user: {email: user.email, admin: user.admin}});
       } else {
         res.send({success: false, msg: 'Authentication failed. Wrong password.'});
       }
-      // user.comparePassword(req.body.password, function (err, isMatch) {
-      //   if (isMatch && !err) {
-      //     var token = jwt.encode(user, config.secret);
-      //     res.json({success: true, token: 'JWT ' + token});
-      //   } else {
-      //     res.send({success: false, msg: 'Authentication failed. Wrong password.'});
-      //   }
-      // }); 
     }
   });
 });
 
+// middleware to use for all requests
+router.use(function(req, res, next) {
+  // do logging
+  console.log('Something is happening.');
+  res.header("Access-Control-Allow-Headers",  "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
+  res.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS,DELETE");
+
+  var token = req.body.token || req.query.token || req.headers['x-access-token'];
+  if (token) {
+    jwt.verify(token, app.get('superSecret'), function (err, decoded) {
+      if (err) {
+        return res.json({success: false, message: 'Failed to authenticate token.'});
+      } else {
+        req.decoded = decoded;
+        next();
+      }
+    })
+  } else {
+    return res.status(403).send({
+      success: false,
+      message: 'No token provided.'
+    });
+  }
+
+ // next(); // make sure we go to the next routes and don't stop here
+});
+
+// test route to make sure everything is working (accessed at GET http://localhost:8080/api)
+router.get('/', function(req, res) {
+  res.json({ message: 'hooray! welcome to our api!' });
+});
 
 router.route('/form')
 //get history of form entries
