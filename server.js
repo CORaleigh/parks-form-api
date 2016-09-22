@@ -11,7 +11,7 @@ var mongoose   = require('mongoose');
 var morgan = require('morgan');
 var User = require('./app/models/user');
 var jwt = require('jsonwebtoken');
-
+var cors = require('cors');
 var configDB = require('./config/database.js');
 mongoose.connect(configDB.url); // connect to our database
 var FormEntry = require('./app/models/formEntry');
@@ -24,7 +24,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
 app.use(morgan('dev'));
-
+app.use(cors());
 app.set('superSecret', configDB.secret);
 
 //var port = process.env.PORT || 8081;        // set our port
@@ -37,12 +37,10 @@ var router = express.Router();              // get an instance of the express Ro
 router.use(function(req, res, next) {
   // do logging
   console.log('Something is happening.');
-  res.header("Access-Control-Allow-Origin", "*");  
   res.header("Access-Control-Allow-Headers",  "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
   res.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS,DELETE");
   next(); // make sure we go to the next routes and don't stop here
 });
-
 
 router.route('/signup')
 .post(function (req, res) {
@@ -73,7 +71,7 @@ router.route('/login')
       res.send({success: false, msg: 'Authentication failed. User not found.'});
     } else {
       if (user.comparePassword(req.body.password)) {
-           var token = jwt.sign(user, app.get('superSecret'), {expiresIn: '30s'});
+           var token = jwt.sign(user, app.get('superSecret'), {expiresIn: '1440m'});
            res.json({success: true, token: token, user: {email: user.email, admin: user.admin}});
       } else {
         res.send({success: false, msg: 'Authentication failed. Wrong password.'});
@@ -85,6 +83,11 @@ router.route('/login')
 var isAdmin = false;
 // middleware to use for all requests
 router.use(function(req, res, next) {
+  // do logging
+  console.log('Something is happening.');
+  res.header("Access-Control-Allow-Headers",  "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
+  res.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS,DELETE");
+
   var token = req.body.token || req.query.token || req.headers['x-access-token'];
   if (token) {
     jwt.verify(token, app.get('superSecret'), function (err, decoded) {
@@ -92,7 +95,7 @@ router.use(function(req, res, next) {
         isAdmin = decoded._doc.admin;
       
       if (err) {
-        return res.json({success: false, message: 'Failed to authenticate token.'});
+        return res.json({success: false, message: 'Session has expired, please log back in.'});
       } else {
         req.decoded = decoded;
         next();
@@ -104,6 +107,8 @@ router.use(function(req, res, next) {
       message: 'No token provided.'
     });
   }
+
+ // next(); // make sure we go to the next routes and don't stop here
 });
 
 // test route to make sure everything is working (accessed at GET http://localhost:8080/api)
@@ -117,7 +122,7 @@ router.route('/form')
     FormEntry.find({}).sort({submitted: -1}).exec(function(err, entries) {
     if (err)
       res.send(err);
-    res.json(entries);
+    res.json({success: true, results: entries});
   });
 })
 //add new form entry  
@@ -174,10 +179,10 @@ router.route('/form')
   	FormEntry.remove({_id: req.body.id}, function (err, entry) {
       if (err)
         res.send(err)
-      res.json({message: 'Successfully deleted ' + req.body.id});
+      res.json({success: true, message: 'Successfully deleted ' + req.body.id});
     });
   } else {
-    res.json({message: 'You do not have permission to do this'});
+    res.json({success: false, message: 'You do not have permission to do this'});
   }
 });
 
@@ -235,7 +240,7 @@ router.route('/form/:id')
     entry.save(function (err) {
       if (err)
         res.send(err);
-      res.json(entry);
+      res.json({success: true, results: entry});
     })
   });
 });
@@ -246,7 +251,7 @@ router.route('/facilities')
     Facility.find({}).sort({name: 1}).exec(function(err, facilities) {
     if (err)
       res.send(err);
-    res.json(facilities);
+      res.json({success: true, results: facilities});
   });
 })
 //add new facility
@@ -257,10 +262,10 @@ router.route('/facilities')
     facility.save(function (err, newFacility) {
       if (err)
         res.send(err);
-      res.json(newFacility);
+      res.json({success: true, results: newFacility});
     });
   } else {
-    res.json({message: 'You do not have permission to do this'});
+    res.json({success: false, message: 'You do not have permission to do this'});
   }
 })
 //delete facility
@@ -269,10 +274,10 @@ router.route('/facilities')
     Facility.remove({_id: req.body.id}, function (err, entry) {
       if (err)
         res.send(err)
-      res.json({message: 'Successfully deleted ' + req.body.id});
+      res.json({success: true, message: 'Successfully deleted ' + req.body.id});
     });
   } else {
-    res.json({message: 'You do not have permission to do this'});    
+    res.json({success: false, message: 'You do not have permission to do this'});    
   }
 });
 
@@ -282,7 +287,7 @@ router.route('/targets')
   Target.find({}).sort({name: 1}).exec(function(err, targets) {
     if (err)
       res.send(err);
-    res.json(targets);
+      res.json({success: true, results: targets});
   });
 })
 //add new target area
@@ -295,10 +300,10 @@ router.route('/targets')
     target.save(function (err, newTarget) {
       if (err)
         res.send(err);
-      res.json(newTarget);
+      res.json({success: true, results: newTarget});
     });
   } else {
-    res.json({message: 'You do not have permission to do this'});
+    res.json({success: false, message: 'You do not have permission to do this'});
   }
 })
 //delete target area
@@ -307,10 +312,10 @@ router.route('/targets')
     Target.remove({_id: req.body.id}, function (err, entry) {
       if (err)
         res.send(err)
-      res.json({message: 'Successfully deleted ' + req.body.id});
+      res.json({success: true, message: 'Successfully deleted ' + req.body.id});
     });
   } else {
-    res.json({message: 'You do not have permission to do this'});    
+    res.json({success: false, message: 'You do not have permission to do this'});    
   }
 });  
 
@@ -321,7 +326,7 @@ router.route('/jobs')
   Job.find({}).sort({name: 1}).exec(function(err, jobs) {
     if (err)
       res.send(err);
-    res.json(jobs);
+      res.json({success: true, results: jobs});
   });
 })
 //add new job
@@ -332,10 +337,10 @@ router.route('/jobs')
     job.save(function (err, newJob) {
       if (err)
         res.send(err);
-      res.json(newJob);
+      res.json({success: true, results: newJob});
     });
   } else {
-    res.json({message: 'You do not have permission to do this'});    
+    res.json({success: false, message: 'You do not have permission to do this'});    
   }
 })
 //delete job
@@ -344,10 +349,10 @@ router.route('/jobs')
     Job.remove({_id: req.body.id}, function (err, entry) {
       if (err)
         res.send(err)
-      res.json({message: 'Successfully deleted ' + req.body.id});
+      res.json({success: true, message: 'Successfully deleted ' + req.body.id});
     });
   } else {
-    res.json({message: 'You do not have permission to do this'});    
+    res.json({success: false, message: 'You do not have permission to do this'});    
   }
 });
 
@@ -358,10 +363,10 @@ router.route('/targets/service/:id')
     Target.update({"services._id": req.params.id}, {"$set":{"services.$.value": req.body.value, "services.$.name": req.body.name}}, {}, function (err){
       if (err)
         res.send(err);
-      res.json({message: 'Successfully updated'});
+      res.json({success: true, message: 'Successfully updated'});
     });
   } else {
-    res.json({message: 'You do not have permission to do this'});    
+    res.json({success: false, message: 'You do not have permission to do this'});    
   }
 })
 //delete service category
@@ -371,10 +376,10 @@ router.route('/targets/service/:id')
       if (err) {
         res.send(err);
       }
-      res.json({message: 'Successfully removed'});
+      res.json({success: true, message: 'Successfully removed'});
     });
   } else {
-    res.json({message: 'You do not have permission to do this'});    
+    res.json({success: false, message: 'You do not have permission to do this'});    
   }
 });
 
@@ -385,10 +390,10 @@ router.route('/targets/:id')
    Target.update({"_id": mongoose.Types.ObjectId(req.params.id)}, {"$push": { "services" : { "name": req.body.name, "value": req.body.value, "_id": mongoose.Types.ObjectId()}}}, {}, function (err) {
      if (err)
         res.send(err);
-     res.json({message: 'Service added'});
+     res.json({success: true, message: 'Service added'});
     });
   } else {
-    res.json({message: 'You do not have permission to do this'});    
+    res.json({success: false, message: 'You do not have permission to do this'});    
   }
 });
 
@@ -404,10 +409,10 @@ router.route('/users')
         delete users[i]['password'];
         data.push({_id: users[i]._id, email: users[i].email, admin: users[i].admin});
       }
-      res.json(data);
+      res.json({success: true, results: data});
     });   
   } else {
-    res.json({message: 'You do not have permission to do this'});      
+    res.json({success: false, message: 'You do not have permission to do this'});      
   }
 });
 router.route('/users/:id')
@@ -417,10 +422,10 @@ router.route('/users/:id')
     User.update({"_id": req.params.id}, {"$set":{"admin": req.body.admin}}, {}, function (err){
       if (err)
         res.send(err);
-      res.json({message: 'Successfully updated'});
+      res.json({success: true, message: 'Successfully updated'});
     });
   } else {
-    res.json({message: 'You do not have permission to do this'});    
+    res.json({success: false, message: 'You do not have permission to do this'});    
   }
 })
 //delete user by id
@@ -429,10 +434,10 @@ router.route('/users/:id')
     User.remove({_id: req.params.id}, function (err, entry) {
       if (err)
         res.send(err)
-      res.json({message: 'Successfully deleted ' + req.body.id});
+      res.json({success: true, message: 'Successfully deleted ' + req.body.id});
     });
   } else {
-    res.json({message: 'You do not have permission to do this'});    
+    res.json({success: false, message: 'You do not have permission to do this'});    
   }
 });
 
