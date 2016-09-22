@@ -170,7 +170,7 @@ router.route('/form')
     entry.save(function (err, newEntry) {
       if (err)
         res.send(err);
-      res.json(newEntry);
+      res.json({success: true, results: newEntry});
     })
   })
 //delete form entry
