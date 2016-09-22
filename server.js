@@ -72,6 +72,15 @@ router.route('/login')
     }
   });
 });
+router.route('/users')
+//get list of users
+.get(function (req, res) {
+  User.find({}).sort({name: 1}).exec(function(err, users) {
+    if (err)
+      res.send(err);
+    res.json(users);
+  });
+});
 
 // middleware to use for all requests
 router.use(function(req, res, next) {
@@ -345,6 +354,7 @@ router.route('/targets/:id')
    res.json({message: 'Service added'});
   })
 });
+
 
 // all of our routes will be prefixed with /api
 app.use('/parks-form-api', router);
