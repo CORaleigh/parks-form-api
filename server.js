@@ -11,7 +11,7 @@ var mongoose   = require('mongoose');
 var morgan = require('morgan');
 var passport = require('passport');
 var User = require('./app/models/user');
-var jwt = require('jwt-simple');
+var jwt = require('jsonwebtoken');
 
 var configDB = require('./config/database.js');
 mongoose.connect(configDB.url); // connect to our database
