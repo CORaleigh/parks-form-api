@@ -33,6 +33,14 @@ var port = 8081;
 // =============================================================================
 var router = express.Router();              // get an instance of the express Router
 
+// middleware to use for all requests
+router.use(function(req, res, next) {
+  // do logging
+  console.log('Something is happening.');
+  res.header("Access-Control-Allow-Headers",  "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
+  res.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS,DELETE");
+  next(); // make sure we go to the next routes and don't stop here
+});
 
 
 router.route('/signup')
@@ -76,11 +84,6 @@ router.route('/login')
 var isAdmin = false;
 // middleware to use for all requests
 router.use(function(req, res, next) {
-  // do logging
-  console.log('Something is happening.');
-  res.header("Access-Control-Allow-Headers",  "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
-  res.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS,DELETE");
-
   var token = req.body.token || req.query.token || req.headers['x-access-token'];
   if (token) {
     jwt.verify(token, app.get('superSecret'), function (err, decoded) {
@@ -100,8 +103,6 @@ router.use(function(req, res, next) {
       message: 'No token provided.'
     });
   }
-
- // next(); // make sure we go to the next routes and don't stop here
 });
 
 // test route to make sure everything is working (accessed at GET http://localhost:8080/api)
