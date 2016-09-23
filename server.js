@@ -72,7 +72,9 @@ router.route('/login')
     } else {
       if (user.comparePassword(req.body.password)) {
            var token = jwt.sign(user, app.get('superSecret'), {expiresIn: '1440m'});
-           res.json({success: true, token: token, user: {email: user.email, admin: user.admin}});
+           var expires = new Date();
+           expires.setDate(expires.getDate() + 1);
+           res.json({success: true, token: token, expires: expires, user: {email: user.email, admin: user.admin}});
       } else {
         res.send({success: false, msg: 'Authentication failed. Wrong password.'});
       }
@@ -93,7 +95,6 @@ router.use(function(req, res, next) {
     jwt.verify(token, app.get('superSecret'), function (err, decoded) {
       if (decoded)
         isAdmin = decoded._doc.admin;
-      
       if (err) {
         return res.json({success: false, message: 'Session has expired, please log back in.'});
       } else {
@@ -192,7 +193,7 @@ router.route('/form/:id')
   FormEntry.find({_id: req.params.id}).exec(function(err, entries) {
     if (err)
       res.send(err);
-    res.json(entries);
+    res.json({success: true, results: entries});
   });
 })
 //update form entry
