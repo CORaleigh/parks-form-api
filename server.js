@@ -176,15 +176,15 @@ router.route('/form')
   })
 //delete form entry
 .delete(function (req, res) {
-  if (isAdmin) {
+ // if (isAdmin) {
   	FormEntry.remove({_id: req.body.id}, function (err, entry) {
       if (err)
         res.send(err)
       res.json({success: true, message: 'Successfully deleted ' + req.body.id});
     });
-  } else {
-    res.json({success: false, message: 'You do not have permission to do this'});
-  }
+  //} else {
+ //   res.json({success: false, message: 'You do not have permission to do this'});
+//}
 });
 
 router.route('/form/:id')
