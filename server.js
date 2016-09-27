@@ -12,11 +12,15 @@ var morgan = require('morgan');
 var User = require('./app/models/user');
 var jwt = require('jsonwebtoken');
 var cors = require('cors');
+var mailer = require("nodemailer");
+var smtpTransport = require("nodemailer-smtp-transport")
 var configDB = require('./config/database.js');
 mongoose.connect(configDB.url); // connect to our database
 var FormEntry = require('./app/models/formEntry');
 var Facility = require('./app/models/facility');
-var Target = require('./app/models/target');
+//var Target = require('./app/models/target');
+var Program = require('./app/models/program');
+var Service = require('./app/models/service');
 var Job = require('./app/models/job');
 // configure app to use bodyParser()
 // this will let us get the data from a POST
@@ -27,6 +31,12 @@ app.use(morgan('dev'));
 app.use(cors());
 app.set('superSecret', configDB.secret);
 
+
+var smtpTransport = mailer.createTransport(smtpTransport({
+    host : "cormailgw2",
+    secureConnection : false,
+    port: 25
+}));
 //var port = process.env.PORT || 8081;        // set our port
 var port = 8081;
 // ROUTES FOR OUR API
@@ -53,11 +63,35 @@ router.route('/signup')
       admin: false
     });
     
-    newUser.save(function (err) {
+    newUser.save(function (err, user) {
       console.log(err);
       if (err)
-        return res.json({success: false, msg: 'Username already exists.'})
-      res.json({success: true, msg: 'Successfully created new user.'})
+        return res.json({success: false, msg: 'Username already exists.'});
+      res.json({success: true, msg: 'Successfully created new user.'});
+      User.find({admin: true}, function (err, users) {
+        console.log(users);
+        var toList = [];
+        for (var i = 0; i < users.length; i++) {
+          toList.push(users[i].email);
+        }
+        var mail = {
+            from: "gis@raleighnc.gov",
+            to: toList,
+            subject: "New Parks Pricing Form Signup",
+            text: "New user " + user.email + " signed up."
+        }
+
+        smtpTransport.sendMail(mail, function(error, response){
+            if(error){
+                console.log(error);
+            }else{
+                console.log("Message sent: " + response.message);
+            }
+
+            smtpTransport.close();
+        });        
+      });
+
     });
   }
 });
@@ -282,26 +316,25 @@ router.route('/facilities')
   }
 });
 
-router.route('/targets')
+router.route('/programs')
 //get all target areas
 .get(function (req, res) {
-  Target.find({}).sort({name: 1}).exec(function(err, targets) {
+  Program.find({}).sort({name: 1}).exec(function(err, programs) {
     if (err)
       res.send(err);
-      res.json({success: true, results: targets});
+      res.json({success: true, results: programs});
   });
 })
 //add new target area
 .post(function (req, res) {
   if (isAdmin) {
-    var target = new Target();
-    target.name = req.body.name;
-    target._id = mongoose.Types.ObjectId(); 
-    target.services = [];
-    target.save(function (err, newTarget) {
+    var program = new Program();
+    program.name = req.body.name;
+    program._id = mongoose.Types.ObjectId(); 
+    program.save(function (err, newProgram) {
       if (err)
         res.send(err);
-      res.json({success: true, results: newTarget});
+      res.json({success: true, results: newProgram});
     });
   } else {
     res.json({success: false, message: 'You do not have permission to do this'});
@@ -310,7 +343,7 @@ router.route('/targets')
 //delete target area
 .delete(function (req, res){
   if (isAdmin) {
-    Target.remove({_id: req.body.id}, function (err, entry) {
+    Program.remove({_id: req.body.id}, function (err, entry) {
       if (err)
         res.send(err)
       res.json({success: true, message: 'Successfully deleted ' + req.body.id});
@@ -318,7 +351,85 @@ router.route('/targets')
   } else {
     res.json({success: false, message: 'You do not have permission to do this'});    
   }
-});  
+}); 
+
+
+// router.route('/targets')
+// //get all target areas
+// .get(function (req, res) {
+//   Target.find({}).sort({name: 1}).exec(function(err, targets) {
+//     if (err)
+//       res.send(err);
+//       res.json({success: true, results: targets});
+//   });
+// })
+// //add new target area
+// .post(function (req, res) {
+//   if (isAdmin) {
+//     var target = new Target();
+//     target.name = req.body.name;
+//     target._id = mongoose.Types.ObjectId(); 
+//     target.services = [];
+//     target.save(function (err, newTarget) {
+//       if (err)
+//         res.send(err);
+//       res.json({success: true, results: newTarget});
+//     });
+//   } else {
+//     res.json({success: false, message: 'You do not have permission to do this'});
+//   }
+// })
+// //delete target area
+// .delete(function (req, res){
+//   if (isAdmin) {
+//     Target.remove({_id: req.body.id}, function (err, entry) {
+//       if (err)
+//         res.send(err)
+//       res.json({success: true, message: 'Successfully deleted ' + req.body.id});
+//     });
+//   } else {
+//     res.json({success: false, message: 'You do not have permission to do this'});    
+//   }
+// });  
+
+
+router.route('/services')
+//get all target areas
+.get(function (req, res) {
+  Service.find({}).sort({name: 1}).exec(function(err, services) {
+    if (err)
+      res.send(err);
+      res.json({success: true, results: services});
+  });
+})
+//add new target area
+.post(function (req, res) {
+  if (isAdmin) {
+    var service = new Service();
+    service.name = req.body.name;
+    service.value = req.body.value;
+    service._id = mongoose.Types.ObjectId(); 
+    service.save(function (err, newService) {
+      if (err)
+        res.send(err);
+      res.json({success: true, results: newService});
+    });
+  } else {
+    res.json({success: false, message: 'You do not have permission to do this'});
+  }
+})
+//delete target area
+.delete(function (req, res){
+  if (isAdmin) {
+    Service.remove({_id: req.body.id}, function (err, entry) {
+      if (err)
+        res.send(err)
+      res.json({success: true, message: 'Successfully deleted ' + req.body.id});
+    });
+  } else {
+    res.json({success: false, message: 'You do not have permission to do this'});    
+  }
+}); 
 
 
 router.route('/jobs')
@@ -357,11 +468,11 @@ router.route('/jobs')
   }
 });
 
-router.route('/targets/service/:id')
+router.route('/services/:id')
 //update service category name and values
 .post(function (req, res){
   if (isAdmin) {
-    Target.update({"services._id": req.params.id}, {"$set":{"services.$.value": req.body.value, "services.$.name": req.body.name}}, {}, function (err){
+    Service.update({"_id": req.params.id}, {"$set":{"value": req.body.value, "name": req.body.name}}, {}, function (err){
       if (err)
         res.send(err);
       res.json({success: true, message: 'Successfully updated'});
@@ -369,34 +480,34 @@ router.route('/targets/service/:id')
   } else {
     res.json({success: false, message: 'You do not have permission to do this'});    
   }
-})
-//delete service category
-.delete(function (req, res){
-  if (isAdmin) {
-    Target.update({}, {"$pull": { "services": { "_id": req.params.id }}}, {"multi": true}, function (err) {
-      if (err) {
-        res.send(err);
-      }
-      res.json({success: true, message: 'Successfully removed'});
-    });
-  } else {
-    res.json({success: false, message: 'You do not have permission to do this'});    
-  }
 });
+// //delete service category
+// .delete(function (req, res){
+//   if (isAdmin) {
+//     Service.update({}, {"$pull": { "services": { "_id": req.params.id }}}, {"multi": true}, function (err) {
+//       if (err) {
+//         res.send(err);
+//       }
+//       res.json({success: true, message: 'Successfully removed'});
+//     });
+//   } else {
+//     res.json({success: false, message: 'You do not have permission to do this'});    
+//   }
+// });
 
-router.route('/targets/:id')
-//add new service category
-.post(function(req,res){
-  if (isAdmin) {
-   Target.update({"_id": mongoose.Types.ObjectId(req.params.id)}, {"$push": { "services" : { "name": req.body.name, "value": req.body.value, "_id": mongoose.Types.ObjectId()}}}, {}, function (err) {
-     if (err)
-        res.send(err);
-     res.json({success: true, message: 'Service added'});
-    });
-  } else {
-    res.json({success: false, message: 'You do not have permission to do this'});    
-  }
-});
+// router.route('/targets/:id')
+// //add new service category
+// .post(function(req,res){
+//   if (isAdmin) {
+//    Target.update({"_id": mongoose.Types.ObjectId(req.params.id)}, {"$push": { "services" : { "name": req.body.name, "value": req.body.value, "_id": mongoose.Types.ObjectId()}}}, {}, function (err) {
+//      if (err)
+//         res.send(err);
+//      res.json({success: true, message: 'Service added'});
+//     });
+//   } else {
+//     res.json({success: false, message: 'You do not have permission to do this'});    
+//   }
+// });
 
 router.route('/users')
 //get list of users
