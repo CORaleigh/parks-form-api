@@ -13,6 +13,8 @@ var User = require('./app/models/user');
 var jwt = require('jsonwebtoken');
 var cors = require('cors');
 var mailer = require("nodemailer");
+var async = require('async');
+var crypto = require('crypto');
 var smtpTransport = require("nodemailer-smtp-transport")
 var configDB = require('./config/database.js');
 mongoose.connect(configDB.url); // connect to our database
@@ -116,6 +118,94 @@ router.route('/login')
   });
 });
 
+router.route('/forgot')
+.post(function (req, res) {
+  async.waterfall([
+    function(done) {
+      crypto.randomBytes(20, function(err, buf) {
+        var token = buf.toString('hex');
+        done(err, token);
+      });
+    },    
+    function(token, done) {
+      User.findOne({email: req.body.email}, function (err, user) {
+        if (err)
+          throw err;
+        if (!user) {
+          res.send({success: false, msg: 'User not found.'});
+        } else {
+          user.resetPasswordToken = token;
+          user.resetPasswordExpires = Date.now() + 3600000;
+           user.save(function (err) {
+            done(err, token, user);
+           });
+        }
+
+      });
+    },
+    function(token, user, done) {
+      var mailOptions = {
+        to: user.email,
+        from: 'gis@raleighnc.gov',
+        subject: 'Parks Pricing Form Password Reset',
+        text: 'You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n' +
+          'Please click on the following link, or paste this into your browser to complete the process:\n\n' +
+          req.headers.referer + '#/reset/' + token + '\n\n' +
+          'If you did not request this, please ignore this email and your password will remain unchanged.\n'
+      };
+      smtpTransport.sendMail(mailOptions, function(err) {
+        if (err)
+          res.send({success: false, message: err.response});
+        res.json({success: true, message: 'Sent reset email.'});
+      });
+    }
+  ], function(err) {
+    if (err) return next(err);
+    //res.redirect('/forgot');
+  });
+});
+router.route('/reset')
+//update user admin
+.post(function (req, res){
+  async.waterfall([
+    function(done) {
+      User.findOne({ resetPasswordToken: req.body.token, resetPasswordExpires: { $gt: Date.now() } }, function(err, user) {
+        if (!user) {
+          //req.flash('error', 'Password reset token is invalid or has expired.');
+          res.send({success: false, message: 'Password reset token is invalid or has expired'});
+          //return res.redirect('back');
+        }
+
+        user.password = req.body.password;
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined
+        user.save(function(err) {
+          // req.logIn(user, function(err) {
+          //   done(err, user);
+          // });
+          done(err, user);
+        });
+      });
+    },
+    function(user, done) {
+      var mailOptions = {
+        to: user.email,
+        from: 'gis@raleighnc.gov',
+        subject: 'Parks Pricing Form Password Has Been Changed',
+        text: 'Hello,\n\n' +
+          'This is a confirmation that the password for your account ' + user.email + ' has just been changed.\n'
+      };
+      smtpTransport.sendMail(mailOptions, function(err) {
+        if (err)
+          res.send({success: false, message: err.response});
+        res.json({success: true, user: user});
+        done(err);
+      });
+    }
+  ], function(err) {
+    //res.redirect('/');
+  });
+});
 var isAdmin = false;
 // middleware to use for all requests
 router.use(function(req, res, next) {
@@ -552,6 +642,9 @@ router.route('/users/:id')
     res.json({success: false, message: 'You do not have permission to do this'});    
   }
 });
+
+
+
 
 
 // all of our routes will be prefixed with /api

@@ -2,8 +2,10 @@
   "name": "parks-form-api",
   "main": "server.js",
   "dependencies": {
+    "async": "^2.0.1",
     "bcrypt-nodejs": "0.0.3",
     "body-parser": "~1.0.1",
+    "crypto": "0.0.3",
     "express": "~4.0.0",
     "jsonwebtoken": "^7.1.9",
     "mongoose": "~3.6.13",
