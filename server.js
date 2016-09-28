@@ -244,7 +244,19 @@ router.get('/', function(req, res) {
 router.route('/form')
 //get history of form entries
 .get(function(req, res) {
-    FormEntry.find({}).sort({submitted: -1}).exec(function(err, entries) {
+    var where = {};
+    if (req.query.where)
+      where = JSON.parse(req.query.where);
+    if (where.start) {
+      if (where.start.$gte) {
+        where.start.$gte = new Date(where.start.$gte);
+      }
+      if (where.start.$lte) {
+        where.start.$lte = new Date(where.start.$lte);
+      }      
+    }
+    console.log(where);
+    FormEntry.find(where).sort({submitted: -1}).exec(function(err, entries) {
     if (err)
       res.send(err);
     res.json({success: true, results: entries});
