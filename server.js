@@ -367,6 +367,7 @@ router.route('/form')
         entry.altRevAmt = req.body.altRevAmt;
         entry.supplyDesc = req.body.supplyDesc;
         entry.supplyAmt = req.body.supplyAmt;
+        entry.supplyType = req.body.supplyType;
         entry.submitted = req.body.submitted;
         entry.needsReview = req.body.needsReview;
         entry.revenue = req.body.revenue;
@@ -462,6 +463,7 @@ router.route('/form/:id')
             entry.altRevAmt = req.body.altRevAmt;
             entry.supplyDesc = req.body.supplyDesc;
             entry.supplyAmt = req.body.supplyAmt;
+            entry.supplyType = req.body.supplyType;
             entry.submitted = req.body.submitted;
             entry.needsReview = req.body.needsReview;
             entry.revenue = req.body.revenue;

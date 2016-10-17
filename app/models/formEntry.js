@@ -31,6 +31,7 @@ var FormEntrySchema = new Schema({
     revenue: Number,
     cost: Number,
     recoveryProjected: Number,
-    recoveryTarget: Number
+    recoveryTarget: Number,
+    supplyType: String
 }, {collection: 'formEntry'});
 module.exports = mongoose.model('FormEntry', FormEntrySchema);
