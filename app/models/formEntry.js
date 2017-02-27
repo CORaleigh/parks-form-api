@@ -1,6 +1,6 @@
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
-var PersonnelSchema = new Schema({title: String, payType: String, status: String, rate: Number, count: Number});
+var PersonnelSchema = new Schema({title: String, payType: String, status: String, rate: Number, count: Number, hourType: String, hours: Number});
 var FormEntrySchema = new Schema({
     personnel: [PersonnelSchema],
     residentialRate: Number,
