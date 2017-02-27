@@ -384,7 +384,9 @@ router.route('/form')
                     payType: personnel[i].payType,
                     rate: personnel[i].rate,
                     status: personnel[i].status,
-                    count: personnel[i].count
+                    count: personnel[i].count,
+                    hourType: (personnel[i].hourType) ? personnel[i].hourType : "",
+                    hours: (personnel[i].hours) ? personnel[i].hours : 0,
                 });
             }
         }
@@ -479,7 +481,9 @@ router.route('/form/:id')
                         payType: personnel[i].payType,
                         rate: personnel[i].rate,
                         status: personnel[i].status,
-                        count: personnel[i].count
+                        count: personnel[i].count,
+                        hourType: (personnel[i].hourType) ? personnel[i].hourType : "",
+                        hours: (personnel[i].hours) ? personnel[i].hours : 0,
                     });
                 }
             }

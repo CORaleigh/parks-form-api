@@ -7,6 +7,8 @@ var PersonnelSchema = new Schema({
     payType: String,
     status: String,
     rate: Number,
-    count: Number
+    count: Number,
+    hourType: String,
+    hours: Number
 });
 module.exports = mongoose.model('Personnel', PersonnelSchema);
