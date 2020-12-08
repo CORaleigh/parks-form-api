@@ -15,7 +15,7 @@ var async = require('async');
 var crypto = require('crypto');
 var smtp = require("nodemailer-smtp-transport");
 var configDB = require('./config/database.js');
-mongoose.connect(configDB.url); // connect to our database
+mongoose.connect(configDB.url, {useNewUrlParser: true, useUnifiedTopology: true,useCreateIndex: true}); // connect to our database
 var FormEntry = require('./app/models/formEntry');
 var Facility = require('./app/models/facility');
 //var Target = require('./app/models/target');
@@ -129,7 +129,7 @@ router.route('/login')
                 });
             } else {
                 if (user.comparePassword(req.body.password)) {
-                    var token = jwt.sign(user, app.get('superSecret'), {
+                    var token = jwt.sign(user.toJSON(), app.get('superSecret'), {
                         expiresIn: '1440m'
                     });
                     var expires = new Date();
