@@ -15,7 +15,10 @@ var async = require('async');
 var crypto = require('crypto');
 var smtp = require("nodemailer-smtp-transport");
 var configDB = require('./config/database.js');
+var ObjectID = require('mongodb').ObjectID;
+
 mongoose.connect(configDB.url, {useNewUrlParser: true, useUnifiedTopology: true,useCreateIndex: true}); // connect to our database
+mongoose.set('useFindAndModify', false);
 var FormEntry = require('./app/models/formEntry');
 var Facility = require('./app/models/facility');
 //var Target = require('./app/models/target');
@@ -271,7 +274,7 @@ router.route('/reset')
             }
         ]);
     });
-var isAdmin = false;
+var admin = false;
 // middleware to use for all requests
 router.use(function (req, res, next) {
     // do logging
@@ -284,7 +287,7 @@ router.use(function (req, res, next) {
     if (token) {
         jwt.verify(token, app.get('superSecret'), function (err, decoded) {
             if (decoded) {
-                isAdmin = decoded._doc.admin;
+                admin = decoded.admin;
             }
             if (err) {
                 return res.json({
@@ -403,9 +406,9 @@ router.route('/form')
     })
     //delete form entry
     .delete(function (req, res) {
-        // if (isAdmin) {
+        // if (admin) {
         'use strict';
-        FormEntry.remove({
+        FormEntry.deleteOne({
             _id: req.body.id
         }, function (err) {
             if (err) {
@@ -519,7 +522,7 @@ router.route('/facilities')
     //add new facility
     .post(function (req, res) {
         'use strict';
-        if (isAdmin) {
+        if (admin) {
             var facility = new Facility();
             facility.name = req.body.name;
             facility.save(function (err, newFacility) {
@@ -541,8 +544,8 @@ router.route('/facilities')
     //delete facility
     .delete(function (req, res) {
         'use strict';
-        if (isAdmin) {
-            Facility.remove({
+        if (admin) {
+            Facility.deleteOne({
                 _id: req.body.id
             }, function (err) {
                 if (err) {
@@ -580,7 +583,7 @@ router.route('/programs')
     //add new target area
     .post(function (req, res) {
         'use strict';
-        if (isAdmin) {
+        if (admin) {
             var program = new Program();
             program.name = req.body.name;
             program._id = mongoose.Types.ObjectId();
@@ -603,8 +606,8 @@ router.route('/programs')
     //delete target area
     .delete(function (req, res) {
         'use strict';
-        if (isAdmin) {
-            Program.remove({
+        if (admin) {
+            Program.deleteOne({
                 _id: req.body.id
             }, function (err) {
                 if (err) {
@@ -635,7 +638,7 @@ router.route('/programs')
 // })
 // //add new target area
 // .post(function (req, res) {
-//   if (isAdmin) {
+//   if (admin) {
 //     var target = new Target();
 //     target.name = req.body.name;
 //     target._id = mongoose.Types.ObjectId();
@@ -651,8 +654,8 @@ router.route('/programs')
 // })
 // //delete target area
 // .delete(function (req, res){
-//   if (isAdmin) {
-//     Target.remove({_id: req.body.id}, function (err, entry) {
+//   if (admin) {
+//     Target.deleteOne({_id: req.body.id}, function (err, entry) {
 //       if (err)
 //         res.send(err)
 //       res.json({success: true, message: 'Successfully deleted ' + req.body.id});
@@ -682,7 +685,7 @@ router.route('/services')
     //add new target area
     .post(function (req, res) {
         'use strict';
-        if (isAdmin) {
+        if (admin) {
             var service = new Service();
             service.name = req.body.name;
             service.value = req.body.value;
@@ -706,8 +709,8 @@ router.route('/services')
     //delete target area
     .delete(function (req, res) {
         'use strict';
-        if (isAdmin) {
-            Service.remove({
+        if (admin) {
+            Service.deleteOne({
                 _id: req.body.id
             }, function (err) {
                 if (err) {
@@ -746,7 +749,7 @@ router.route('/jobs')
     //add new job
     .post(function (req, res) {
         'use strict';
-        if (isAdmin) {
+        if (admin) {
             var job = new Job();
             job.name = req.body.name;
             job.save(function (err, newJob) {
@@ -768,8 +771,8 @@ router.route('/jobs')
     //delete job
     .delete(function (req, res) {
         'use strict';
-        if (isAdmin) {
-            Job.remove({
+        if (admin) {
+            Job.deleteOne({
                 _id: req.body.id
             }, function (err) {
                 if (err) {
@@ -792,15 +795,15 @@ router.route('/services/:id')
     //update service category name and values
     .post(function (req, res) {
         'use strict';
-        if (isAdmin) {
-            Service.update({
+        if (admin) {
+            Service.updateOne({
                 _id: req.params.id
             }, {
                 $set: {
                     value: req.body.value,
                     name: req.body.name
                 }
-            }, {}, function (err) {
+            }, function (err) {
                 if (err) {
                     res.send(err);
                 }
@@ -818,8 +821,8 @@ router.route('/services/:id')
     });
 // //delete service category
 // .delete(function (req, res){
-//   if (isAdmin) {
-//     Service.update({}, {"$pull": { "services": { "_id": req.params.id }}}, {"multi": true}, function (err) {
+//   if (admin) {
+//     Service.updateOne({}, {"$pull": { "services": { "_id": req.params.id }}}, {"multi": true}, function (err) {
 //       if (err) {
 //         res.send(err);
 //       }
@@ -833,8 +836,8 @@ router.route('/services/:id')
 // router.route('/targets/:id')
 // //add new service category
 // .post(function (req,res){
-//   if (isAdmin) {
-//    Target.update({"_id": mongoose.Types.ObjectId(req.params.id)}, {"$push": { "services" : { "name": req.body.name, "value": req.body.value, "_id": mongoose.Types.ObjectId()}}}, {}, function (err) {
+//   if (admin) {
+//    Target.updateOne({"_id": mongoose.Types.ObjectId(req.params.id)}, {"$push": { "services" : { "name": req.body.name, "value": req.body.value, "_id": mongoose.Types.ObjectId()}}}, {}, function (err) {
 //      if (err)
 //         res.send(err);
 //      res.json({success: true, message: 'Service added'});
@@ -848,7 +851,7 @@ router.route('/users')
     //get list of users
     .get(function (ignore, res) {
         'use strict';
-        if (isAdmin) {
+        if (admin) {
             User.find({}).sort({
                 name: 1
             }).exec(function (err, users) {
@@ -881,14 +884,15 @@ router.route('/users/:id')
     //update user admin
     .post(function (req, res) {
         'use strict';
-        if (isAdmin) {
-            User.update({
+        if (admin) {
+
+            console.log(req.body.admin);
+            User.findOneAndUpdate({
                 _id: req.params.id
             }, {
-                $set: {
-                    admin: req.body.admin
+                    admin:  req.body.admin
                 }
-            }, {}, function (err) {
+            , function (err) {
                 if (err) {
                     res.send(err);
                 }
@@ -907,8 +911,8 @@ router.route('/users/:id')
     //delete user by id
     .delete(function (req, res) {
         'use strict';
-        if (isAdmin) {
-            User.remove({
+        if (admin) {
+            User.deleteOne({
                 _id: req.params.id
             }, function (err) {
                 if (err) {
