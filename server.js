@@ -377,7 +377,9 @@ router.route('/form')
         entry.cost = req.body.cost;
         entry.recoveryProjected = req.body.recoveryProjected;
         entry.recoveryTarget = req.body.recoveryTarget;
+        entry.dropins = req.body.dropins;
         entry.personnel = [];
+
 
         if (req.body.personnel) {
             var personnel = JSON.parse(req.body.personnel);
