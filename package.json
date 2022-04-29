@@ -2,7 +2,7 @@
   "name": "parks-form-api",
   "main": "server.js",
   "dependencies": {
-    "async": "^2.0.1",
+    "async": "^2.6.4",
     "bcrypt-nodejs": "0.0.3",
     "body-parser": "^1.19.0",
     "bson": "^4.2.2",
