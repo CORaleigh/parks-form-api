@@ -38,9 +38,10 @@ app.set('superSecret', configDB.secret);
 
 
 var smtpTransport = mailer.createTransport(smtp({
-    host: "cormailgw2",
+    host: "cormailgw2.ci.raleigh.nc.us",
     secureConnection: false,
-    port: 25
+    port: 25,
+    tls: {rejectUnauthorized: false}    
 }));
 //var port = process.env.PORT || 8081;        // set our port
 var port = 8081;
@@ -477,6 +478,7 @@ router.route('/form/:id')
             entry.cost = req.body.cost;
             entry.recoveryProjected = req.body.recoveryProjected;
             entry.recoveryTarget = req.body.recoveryTarget;
+            entry.adminFee = req.body.adminFee;
             entry.personnel = [];
             if (req.body.personnel) {
                 var personnel = JSON.parse(req.body.personnel);
